@@ -58,7 +58,7 @@ spec:
         - -v={{ .Values.logLevel }}
         - -logtostderr
         - -namespace={{ .Values.sparkJobNamespace }}
-        - -enable-ui-service={{ .Values.uiService.enable}}
+        #- -enable-ui-service={{ .Values.uiService.enable}}
         - -ingress-url-format={{ .Values.ingressUrlFormat }}
         - -controller-threads={{ .Values.controllerThreads }}
         - -resync-interval={{ .Values.resyncInterval }}
@@ -97,7 +97,8 @@ spec:
       volumes:
         - name: webhook-certs
           secret:
-            secretName: {{ include "spark-operator.fullname" . }}-webhook-certs
+            #secretName: {{ include "spark-operator.fullname" . }}-webhook-certs
+            secretName: spark-webhook-certs
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
