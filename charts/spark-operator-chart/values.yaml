@@ -8,11 +8,11 @@ replicaCount: 1
 
 image:
   # -- Image repository
-  repository: gcr.io/spark-operator/spark-operator
+  repository: docker.io/mesosphere/kudo-spark-operator
   # -- Image pull policy
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "3.0.0-1.1.0"
 
 # -- Image pull secrets
 imagePullSecrets: []
@@ -164,3 +164,39 @@ istio:
 
 # labelSelectorFilter -- A comma-separated list of key=value, or key labels to filter resources during watch and list based on the specified labels.
 labelSelectorFilter: ""
+
+historyServer:
+  # -- Enable Spark History Server
+  enabled: false
+  # -- Optionally start History Server in another namespace. Defaults to operator's namespace
+  namespace: ""
+  # -- Extra options to pass to the Spark History Server
+  opts: ""
+  # -- Name of a Secret with Hadoop Delegation Token. The secret should be in the same namespace as the Operator.
+  delegationTokenSecret: ""
+  # -- Name of a Secret with Spark config file. The secret should be in the same namespace as the Operator. 
+  sparkConfSecret: ""
+  # -- External Persistent Volume Claim Name used for Spark event logs storage by History Server. Used with fs.logDirectory option.  
+  pvcName:  ""
+  fs:
+    # -- Spark EventLog Directory from which to load events for prior Spark job runs (e.g., hdfs://hdfs/ or s3a://path/to/bucket).
+    # -- Note: You'd typically want to set this to point to distributed/HA storage via the pvcName option.
+    logDirectory: ""
+    cleaner:
+      # -- Specifies whether the Spark History Server should periodically clean up event logs from storage. 
+      enabled: false
+      # -- Frequency the Spark History Server checks for files to delete.
+      interval: "1d"
+      # -- History files older than this will be deleted.
+      maxAge: "7d"
+  image:
+    # -- Image repository
+    # repository: gcr.io/spark-operator/spark
+    # DELETEME@kjoshi remove this!
+    repository: docker.io/mesosphere/spark
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+    # -- Overrides the image tag. Default is the base Spark Version from the chart appVersion.
+    # tag: ""
+    # DELETEME@kjoshi remove this!
+    tag: spark-3.0.0-hadoop-2.9-k8s
