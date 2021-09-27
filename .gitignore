@@ -7,3 +7,9 @@ sparkctl/sparkctl
 spark-on-k8s-operator
 sparkctl/sparkctl-linux-amd64
 sparkctl/sparkctl-darwin-amd64
+
+# D2iQ related
+tmp.checksum
+docker-operator
+docker-spark
+docker-builder
