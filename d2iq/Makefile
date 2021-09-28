@@ -12,6 +12,8 @@ export CLUSTER_CONFIG_YAML ?= $(ROOT_DIR)/cluster.template.yaml
 export WORKER_NODE_INSTANCE_TYPE ?= m5.2xlarge
 export WORKER_NODE_COUNT ?= 5
 
+export CHARTMUSEUM_VERSION ?= v0.13.1
+
 export NAMESPACE ?= spark
 MKE_CLUSTER_NAME=kubernetes-cluster1
 
@@ -136,8 +138,10 @@ update-spark-image-in-test-manifests:
 .PHONY: kuttl-test
 kuttl-test: docker-builder
 kuttl-test: docker-push
+kuttl-test: chartmuseum
 kuttl-test:
 	docker run -i --rm \
+		--link chartmuseum
 		-v $(ROOT_DIR):/kudo-spark-operator \
 		-v $(KUBECONFIG):/root/.kube/config \
 		-w /kudo-spark-operator \
@@ -152,6 +156,48 @@ kuttl-test:
 		-e AWS_BUCKET_PATH=$(AWS_BUCKET_PATH) \
 		$(shell cat $(ROOT_DIR)/docker-builder) \
 		kubectl kuttl test --report xml $(KUTTL_FLAGS)
+
+# Run chartmuseum to host dev versions of the helm package.
+# The container will be called 'chartmuseum' and we link to
+# it when running tests etc...
+.PHONY: chartmuseum
+chartmuseum:
+	mkdir -p  $(ROOT_DIR)/artifacts/chartstorage
+	# Run chartmuseum docker image called "chartmuseum"
+	docker run --rm -it \
+  		--name chartmuseum \
+  		-p 8080:8080 \
+  		-e DEBUG=1 \
+  		-e STORAGE=local \
+  		-e STORAGE_LOCAL_ROOTDIR=/chartstorage \
+  		-v $(ROOT_DIR)/artifacts/chartstorage:/chartstorage \
+  		ghcr.io/helm/chartmuseum:$(CHARTMUSEUM_VERSION)
+
+.PHONY: helm-package-chart
+helm-package-chart: docker-builder
+helm-package-chart:
+	mkdir -p  $(ROOT_DIR)/artifacts/charts
+	docker run -i --rm \
+			-v $(ROOT_DIR):/kudo-spark-operator \
+			-w /kudo-spark-operator \
+			$(shell cat $(ROOT_DIR)/docker-builder) \
+			helm package -d artifacts/charts charts/spark-operator-chart 
+
+# Push packaged helm chart to chartmuseum
+# This requires 'chartmuseum' container to be running.
+.PHONY: push-package-chartmuseum
+push-package-chartmuseum: helm-package-chart
+	docker run -i --rm \
+			--link chartmuseum \
+			-v $(ROOT_DIR):/kudo-spark-operator \
+			-w /kudo-spark-operator \
+			$(shell cat $(ROOT_DIR)/docker-builder) \
+			/bin/bash << 'EOF'
+			for chart in artifacts/charts/*.tgz;
+				# NOTE: Do NOT quote the @$${chart} here, otherwise we just upload the name of the file causing errors.
+				do curl --data-binary @$${chart} http://chartmuseum:8080/api/charts;
+			done
+			EOF
 
 # TODO@kjoshi: Replace this with a helm install.
 .PHONY: install
