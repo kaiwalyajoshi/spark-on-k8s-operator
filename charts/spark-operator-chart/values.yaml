@@ -8,7 +8,7 @@ replicaCount: 1
 
 image:
   # -- Image repository
-  repository: docker.io/mesosphere/kudo-spark-operator
+  repository: docker.io/mesosphere/spark-operator
   # -- Image pull policy
   pullPolicy: IfNotPresent
   # -- Overrides the image tag whose default is the chart appVersion.
