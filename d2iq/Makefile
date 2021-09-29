@@ -29,12 +29,12 @@ SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
 
 SPARK_RELEASE_DOCKER_REPO ?= mesosphere/spark
 
-export OPERATOR_DOCKER_REPO ?= $(DOCKER_ORG)/kudo-spark-operator-dev
+export OPERATOR_DOCKER_REPO ?= $(DOCKER_ORG)/spark-operator-dev
 export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(SPARK_OPERATOR_DIR))
 OPERATOR_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/operator
 OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
 
-OPERATOR_RELEASE_DOCKER_REPO ?= mesosphere/kudo-spark-operator
+OPERATOR_RELEASE_DOCKER_REPO ?= mesosphere/spark-operator
 
 DOCKER_BUILDER_REPO ?= $(DOCKER_ORG)/spark-operator-docker-builder
 DOCKER_BUILDER_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/builder
@@ -135,10 +135,10 @@ update-spark-image-in-test-manifests:
 		fi
 	done
 
+# This requires 'chartmuseum' container to be running.
 .PHONY: kuttl-test
 kuttl-test: docker-builder
 kuttl-test: docker-push
-kuttl-test: chartmuseum
 kuttl-test:
 	docker run -i --rm \
 		--link chartmuseum
