@@ -129,7 +129,7 @@ update-spark-image-in-test-manifests:
 	  echo 'Error: yq is not installed.' >&2
 	  exit 1
 	fi
-	for yaml in tests/**/**/*.yaml; do
+	for yaml in d2iq/tests/**/**/*.yaml; do
 		if [[ `yq r $$yaml 'kind'` == 'SparkApplication' ]]; then
 			yq w -i $$yaml 'spec.image' $(SPARK_IMAGE_FULL_NAME)
 		fi
