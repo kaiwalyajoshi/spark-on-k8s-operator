@@ -3,7 +3,7 @@ FROM ubuntu:20.04
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TINI_VERSION=v0.18.0
 ARG SPARK_REPO="apache/spark"
-ARG SPARK_TAG="v3.1.1"
+ARG SPARK_TAG="3.1.1"
 ARG SCALA_VERSION="2.12"
 ARG HADOOP_VERSION="2.9.2"
 
@@ -28,6 +28,10 @@ ENV R_HOME /usr/lib/R
 ENV JAVA_HOME /usr/lib/jvm/java-8-openjdk-amd64
 ENV PATH $JAVA_HOME/bin:$PATH
 
+ENV SCALA_VERSION=${SCALA_VERSION}
+ENV HADOOP_VERSION=${HADOOP_VERSION}
+ENV SPARK_VERSION=${SPARK_TAG}
+
 RUN set -ex && \
     apt-get update && \
     ln -s /lib /lib64 && \
@@ -50,7 +54,7 @@ RUN set -ex && \
 RUN git clone https://github.com/${SPARK_REPO}.git && \
     cd spark && \
     git fetch --tags && \
-    git checkout ${SPARK_TAG} && \
+    git checkout v${SPARK_TAG} && \
     ./dev/make-distribution.sh ${SPARK_BUILD_ARGS} && \
     mv /spark/dist/* ${SPARK_HOME} && \
     rm -rf /spark /root/.m2/repository/*
