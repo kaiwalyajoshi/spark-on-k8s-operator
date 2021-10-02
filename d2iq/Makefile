@@ -20,26 +20,28 @@ MKE_CLUSTER_NAME=kubernetes-cluster1
 CLUSTER_TYPE ?= konvoy
 KUBECONFIG ?= $(ROOT_DIR)/admin.conf
 
-DOCKER_ORG ?= mesosphere
+# DELETEME@kjoshi remove this!
+#DOCKER_ORG ?= mesosphere
+DOCKER_ORG ?= kaiwalyarjoshi
 
 SPARK_DOCKER_REPO ?= $(DOCKER_ORG)/spark-dev
 SPARK_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/spark
 SPARK_IMAGE_TAG ?= $(call files_checksum,$(SPARK_IMAGE_DIR))
-SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
+export SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
 
 SPARK_RELEASE_DOCKER_REPO ?= mesosphere/spark
 
 export OPERATOR_DOCKER_REPO ?= $(DOCKER_ORG)/spark-operator-dev
 export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(SPARK_OPERATOR_DIR))
 OPERATOR_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/operator
-OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
+export OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
 
 OPERATOR_RELEASE_DOCKER_REPO ?= mesosphere/spark-operator
 
 DOCKER_BUILDER_REPO ?= $(DOCKER_ORG)/spark-operator-docker-builder
 DOCKER_BUILDER_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/builder
 DOCKER_BUILDER_IMAGE_TAG ?= $(call files_checksum,$(DOCKER_BUILDER_IMAGE_DIR))
-DOCKER_BUILDER_IMAGE_FULL_NAME ?= $(DOCKER_BUILDER_REPO):$(DOCKER_BUILDER_IMAGE_TAG)
+export DOCKER_BUILDER_IMAGE_FULL_NAME ?= $(DOCKER_BUILDER_REPO):$(DOCKER_BUILDER_IMAGE_TAG)
 
 # Cluster provisioining and teardown
 export AWS_PROFILE ?=
@@ -101,7 +103,7 @@ docker-spark:
 
 docker-operator: docker-spark
 docker-operator:
-	if [[ -z "$(call remote_image_exists,$(OPERATOR_DOCKER_REPO),$(OPERATOR_VERSION))" ]]; then
+	if [[ -z "$(call local_image_exists,$(SPARK_IMAGE_FULL_NAME))" ]]; then
 		docker build \
 			--build-arg SPARK_IMAGE=$(shell cat $(ROOT_DIR)/docker-spark) \
 			-t ${OPERATOR_IMAGE_FULL_NAME} \
@@ -122,6 +124,55 @@ docker-push:
 
 # Testing
 
+.PHONY: update-spark-templates
+update-spark-templates:
+	# Get Spark, Scala & Hadoop version details.
+	docker run -i --rm \
+		-v $(ROOT_DIR):/kudo-spark-operator \
+		-w /kudo-spark-operator \
+		$(shell cat $(ROOT_DIR)/docker-spark) \
+		/bin/bash << 'EOF'
+		set -x
+		echo "export SPARK_VERSION=$${SPARK_VERSION}" > docker-spark-env
+		echo "export SCALA_VERSION=$${SCALA_VERSION}" >> docker-spark-env
+		echo "export HADOOP_VERSION=$${HADOOP_VERSION}" >> docker-spark-env
+		EOF
+
+	# Render all the templates with the correct versions.
+	docker run -i --rm \
+		-v $(ROOT_DIR):/kudo-spark-operator \
+		-w /kudo-spark-operator \
+		-e SPARK_IMAGE_FULL_NAME=$(SPARK_IMAGE_FULL_NAME) \
+		-e OPERATOR_IMAGE_FULL_NAME=$(OPERATOR_IMAGE_FULL_NAME) \
+		$(shell cat $(ROOT_DIR)/docker-builder) \
+		/bin/bash << 'EOF'
+		set -x
+		if ! command -v yq &> /dev/null; then
+		echo 'Error: yq is not installed.' >&2
+		exit 1
+		fi
+		if ! command -v envsubst &> /dev/null; then
+		echo 'Error: envsubst is not installed.' >&2
+		exit 1
+		fi
+
+		# Create test folders.
+		mkdir -p artifacts/tests
+		cp -r d2iq/kuttl-test-templates/*  artifacts/tests
+
+		# Get Spark, Scala & Hadoop versions.
+		source docker-spark-env
+		# Let all the files to process.
+		test_files=( artifacts/tests/**/**.yaml* ) 
+		for yaml in $${test_files[@]}; do
+			# Replace tokens.
+			sed -i "s|SCALA_VERSION|$${SCALA_VERSION}|g" $$yaml
+			sed -i "s|SPARK_VERSION|$${SPARK_VERSION}|g" $$yaml
+			sed -i "s|HADOOP_VERSION|$${HADOOP_VERSION}|g" $$yaml
+			sed -i "s|SPARK_IMAGE_FULL_NAME|$${SPARK_IMAGE_FULL_NAME}|g" $$yaml
+			sed -i "s|OPERATOR_IMAGE_FULL_NAME|$${OPERATOR_IMAGE_FULL_NAME}|g" $$yaml
+		done
+		EOF
 # this target updates Spark image for all SparkApplication manifests in tests
 .PHONY: update-spark-image-in-test-manifests
 update-spark-image-in-test-manifests:
