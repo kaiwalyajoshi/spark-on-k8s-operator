@@ -192,11 +192,8 @@ historyServer:
   image:
     # -- Image repository
     # repository: gcr.io/spark-operator/spark
-    # DELETEME@kjoshi remove this!
     repository: docker.io/mesosphere/spark
     # -- Image pull policy
     pullPolicy: IfNotPresent
     # -- Overrides the image tag. Default is the base Spark Version from the chart appVersion.
-    # tag: ""
-    # DELETEME@kjoshi remove this!
     tag: spark-3.0.0-hadoop-2.9-k8s
