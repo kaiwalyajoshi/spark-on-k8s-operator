@@ -12,6 +12,7 @@ export CLUSTER_CONFIG_YAML ?= $(ROOT_DIR)/cluster.template.yaml
 export WORKER_NODE_INSTANCE_TYPE ?= m5.2xlarge
 export WORKER_NODE_COUNT ?= 5
 
+export CHARTMUSEUM_PORT ?= 8080
 export CHARTMUSEUM_VERSION ?= v0.13.1
 
 export NAMESPACE ?= spark
@@ -20,27 +21,29 @@ MKE_CLUSTER_NAME=kubernetes-cluster1
 CLUSTER_TYPE ?= konvoy
 KUBECONFIG ?= $(ROOT_DIR)/admin.conf
 
+DOCKER_REGISTRY ?= docker.io
+
 # DELETEME@kjoshi remove this!
 #DOCKER_ORG ?= mesosphere
 DOCKER_ORG ?= kaiwalyarjoshi
 
-SPARK_DOCKER_REPO ?= $(DOCKER_ORG)/spark-dev
+export SPARK_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-dev
 SPARK_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/spark
-SPARK_IMAGE_TAG ?= $(call files_checksum,$(SPARK_IMAGE_DIR))
+export SPARK_IMAGE_TAG ?= $(call files_checksum,$(SPARK_IMAGE_DIR))
 export SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
 
-SPARK_RELEASE_DOCKER_REPO ?= mesosphere/spark
+SPARK_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark
 
-export OPERATOR_DOCKER_REPO ?= $(DOCKER_ORG)/spark-operator-dev
+export OPERATOR_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator-dev
 export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(SPARK_OPERATOR_DIR))
 OPERATOR_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/operator
 export OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
 
-OPERATOR_RELEASE_DOCKER_REPO ?= mesosphere/spark-operator
+OPERATOR_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator
 
-DOCKER_BUILDER_REPO ?= $(DOCKER_ORG)/spark-operator-docker-builder
+export DOCKER_BUILDER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator-docker-builder
 DOCKER_BUILDER_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/builder
-DOCKER_BUILDER_IMAGE_TAG ?= $(call files_checksum,$(DOCKER_BUILDER_IMAGE_DIR))
+export DOCKER_BUILDER_IMAGE_TAG ?= $(call files_checksum,$(DOCKER_BUILDER_IMAGE_DIR))
 export DOCKER_BUILDER_IMAGE_FULL_NAME ?= $(DOCKER_BUILDER_REPO):$(DOCKER_BUILDER_IMAGE_TAG)
 
 # Cluster provisioining and teardown
@@ -49,8 +52,11 @@ export AWS_ACCESS_KEY_ID ?=
 export AWS_SECRET_ACCESS_KEY ?=
 export AWS_SESSION_TOKEN ?=
 
-AWS_BUCKET_NAME ?= "kudo-ds-ci-artifacts"
-AWS_BUCKET_PATH ?= "kudo-spark-operator/tests"
+#AWS_BUCKET_NAME ?= "kudo-ds-ci-artifacts"
+#AWS_BUCKET_PATH ?= "kudo-spark-operator/tests"
+
+AWS_BUCKET_NAME ?= "kjoshi-dev"
+AWS_BUCKET_PATH ?= "spark-operator/tests"
 
 .PHONY: aws_credentials
 aws_credentials:
@@ -126,13 +132,13 @@ docker-push:
 
 .PHONY: update-spark-templates
 update-spark-templates:
+	mkdir -p artifacts/tests
 	# Get Spark, Scala & Hadoop version details.
 	docker run -i --rm \
 		-v $(ROOT_DIR):/kudo-spark-operator \
 		-w /kudo-spark-operator \
 		$(shell cat $(ROOT_DIR)/docker-spark) \
 		/bin/bash << 'EOF'
-		set -x
 		echo "export SPARK_VERSION=$${SPARK_VERSION}" > docker-spark-env
 		echo "export SCALA_VERSION=$${SCALA_VERSION}" >> docker-spark-env
 		echo "export HADOOP_VERSION=$${HADOOP_VERSION}" >> docker-spark-env
@@ -144,9 +150,13 @@ update-spark-templates:
 		-w /kudo-spark-operator \
 		-e SPARK_IMAGE_FULL_NAME=$(SPARK_IMAGE_FULL_NAME) \
 		-e OPERATOR_IMAGE_FULL_NAME=$(OPERATOR_IMAGE_FULL_NAME) \
+		-e OPERATOR_DOCKER_REPO=$(OPERATOR_DOCKER_REPO) \
+		-e OPERATOR_VERSION=$(OPERATOR_VERSION) \
+		-e SPARK_DOCKER_REPO=$(SPARK_DOCKER_REPO) \
+		-e SPARK_IMAGE_TAG=$(SPARK_IMAGE_TAG) \
+		-e CHARTMUSEUM_PORT=$(CHARTMUSEUM_PORT) \
 		$(shell cat $(ROOT_DIR)/docker-builder) \
 		/bin/bash << 'EOF'
-		set -x
 		if ! command -v yq &> /dev/null; then
 		echo 'Error: yq is not installed.' >&2
 		exit 1
@@ -166,13 +176,19 @@ update-spark-templates:
 		test_files=( artifacts/tests/**/**.yaml* ) 
 		for yaml in $${test_files[@]}; do
 			# Replace tokens.
+			sed -i "s|CHARTMUSEUM_PORT|$${CHARTMUSEUM_PORT}|g" $$yaml
 			sed -i "s|SCALA_VERSION|$${SCALA_VERSION}|g" $$yaml
 			sed -i "s|SPARK_VERSION|$${SPARK_VERSION}|g" $$yaml
 			sed -i "s|HADOOP_VERSION|$${HADOOP_VERSION}|g" $$yaml
 			sed -i "s|SPARK_IMAGE_FULL_NAME|$${SPARK_IMAGE_FULL_NAME}|g" $$yaml
 			sed -i "s|OPERATOR_IMAGE_FULL_NAME|$${OPERATOR_IMAGE_FULL_NAME}|g" $$yaml
+			sed -i "s|OPERATOR_DOCKER_REPO|$${OPERATOR_DOCKER_REPO}|g" $$yaml
+			sed -i "s|OPERATOR_VERSION|$${OPERATOR_VERSION}|g" $$yaml
+			sed -i "s|SPARK_DOCKER_REPO|$${SPARK_DOCKER_REPO}|g" $$yaml
+			sed -i "s|SPARK_IMAGE_TAG|$${SPARK_IMAGE_TAG}|g" $$yaml
 		done
 		EOF
+
 # this target updates Spark image for all SparkApplication manifests in tests
 .PHONY: update-spark-image-in-test-manifests
 update-spark-image-in-test-manifests:
@@ -189,7 +205,6 @@ update-spark-image-in-test-manifests:
 # This requires 'chartmuseum' container to be running.
 .PHONY: kuttl-test
 kuttl-test: docker-builder
-kuttl-test: docker-push
 kuttl-test:
 	docker run -i --rm \
 		--link chartmuseum
@@ -217,7 +232,7 @@ chartmuseum:
 	# Run chartmuseum docker image called "chartmuseum"
 	docker run --rm -it \
   		--name chartmuseum \
-  		-p 8080:8080 \
+  		-p $(CHARTMUSEUM_PORT):$(CHARTMUSEUM_PORT) \
   		-e DEBUG=1 \
   		-e STORAGE=local \
   		-e STORAGE_LOCAL_ROOTDIR=/chartstorage \

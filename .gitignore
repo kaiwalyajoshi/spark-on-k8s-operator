@@ -13,4 +13,5 @@ tmp.checksum
 docker-operator
 docker-spark
 docker-builder
+docker-spark-env
 artifacts/*
