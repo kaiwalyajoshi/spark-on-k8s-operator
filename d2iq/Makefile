@@ -50,21 +50,15 @@ export DOCKER_BUILDER_IMAGE_FULL_NAME ?= $(DOCKER_BUILDER_REPO):$(DOCKER_BUILDER
 
 # Cluster provisioining and teardown
 export AWS_PROFILE ?=
-export AWS_ACCESS_KEY_ID ?=
-export AWS_SECRET_ACCESS_KEY ?=
-export AWS_SESSION_TOKEN ?=
+export AWS_ACCESS_KEY_ID ?= $(call get_aws_credential,aws_access_key_id)
+export AWS_SECRET_ACCESS_KEY ?= $(call get_aws_credential,aws_secret_access_key)
+export AWS_SESSION_TOKEN ?=$(call get_aws_credential,aws_session_token)
 
 #AWS_BUCKET_NAME ?= "kudo-ds-ci-artifacts"
 #AWS_BUCKET_PATH ?= "kudo-spark-operator/tests"
 
 AWS_BUCKET_NAME ?= "kjoshi-dev"
 AWS_BUCKET_PATH ?= "spark-operator/tests"
-
-.PHONY: aws_credentials
-aws_credentials:
-	$(eval AWS_ACCESS_KEY_ID := $(if $(AWS_ACCESS_KEY_ID),$(AWS_ACCESS_KEY_ID),$(call get_aws_credential,aws_access_key_id)))
-	$(eval AWS_SECRET_ACCESS_KEY := $(if $(AWS_SECRET_ACCESS_KEY),$(AWS_SECRET_ACCESS_KEY),$(call get_aws_credential,aws_secret_access_key)))
-	$(eval AWS_SESSION_TOKEN := $(if $(AWS_SESSION_TOKEN),$(AWS_SESSION_TOKEN),$(call get_aws_credential,aws_session_token)))
 
 # TODO@kjoshi, replace these with konvoy2
 .PHONY: cluster-create
@@ -216,7 +210,7 @@ update-spark-image-in-test-manifests:
 kuttl-test: docker-builder
 kuttl-test:
 	docker run -i --rm \
-		--link chartmuseum
+		--link chartmuseum \
 		-v $(ROOT_DIR):/kudo-spark-operator \
 		-v $(KUBECONFIG):/root/.kube/config \
 		-w /kudo-spark-operator \
@@ -296,7 +290,7 @@ clean-all:
 
 # function for extracting the value of an AWS property passed as an argument
 define get_aws_credential
-$(if $(AWS_PROFILE),$(shell cat ~/.aws/credentials | grep ${AWS_PROFILE} -A3 | tail -n3 | grep $1 | xargs | cut -d ' ' -f3),$(warning unable to update $1 from AWS credentials file: AWS_PROFILE is not provided. $1 will not be set))
+$(if $(AWS_PROFILE),$(shell cat ~/.aws/credentials | grep ${AWS_PROFILE} -A4 | tail -n4 | grep $1 | xargs | cut -d ' ' -f3),$(warning unable to update $1 from AWS credentials file: AWS_PROFILE is not provided. $1 will not be set))
 endef
 
 # function for calculating global checksum of directories and files passed as arguments.
