@@ -35,8 +35,10 @@ export SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
 SPARK_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark
 
 export OPERATOR_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator-dev
-export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(SPARK_OPERATOR_DIR))
 OPERATOR_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/operator
+# Excercise caution in included lists for files_checksum here. Do not include $(ROOT_DIR) as it gets new build artifacts
+# Otherwise the checksum used as the image tag will always change.
+export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(ROOT_DIR)/pkg $(ROOT_DIR)/main.go)
 export OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
 
 OPERATOR_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator
@@ -120,12 +122,19 @@ docker-operator:
 
 docker-push: docker-spark
 docker-push: docker-operator
+docker-push: docker-builder
 docker-push:
+	# docker-spark
 	if [[ -z "$(call remote_image_exists,$(SPARK_DOCKER_REPO),$(SPARK_IMAGE_TAG))" ]]; then
 		docker push $(SPARK_IMAGE_FULL_NAME)
 	fi
+	# docker-operator
 	if [[ -z "$(call remote_image_exists,$(OPERATOR_DOCKER_REPO),$(OPERATOR_VERSION))" ]]; then
 		docker push $(OPERATOR_IMAGE_FULL_NAME)
+	fi
+	# docker-builder
+	if [[ -z "$(call remote_image_exists,$(DOCKER_BUILDER_REPO),$(DOCKER_BUILDER_IMAGE_TAG))" ]]; then
+		docker push $(DOCKER_BUILDER_IMAGE_FULL_NAME)
 	fi
 
 # Testing
@@ -172,7 +181,7 @@ update-spark-templates:
 
 		# Get Spark, Scala & Hadoop versions.
 		source docker-spark-env
-		# Let all the files to process.
+		# Get all the files to process.
 		test_files=( artifacts/tests/**/**.yaml* ) 
 		for yaml in $${test_files[@]}; do
 			# Replace tokens.
@@ -221,7 +230,7 @@ kuttl-test:
 		-e AWS_BUCKET_NAME=$(AWS_BUCKET_NAME) \
 		-e AWS_BUCKET_PATH=$(AWS_BUCKET_PATH) \
 		$(shell cat $(ROOT_DIR)/docker-builder) \
-		kubectl kuttl test --report xml $(KUTTL_FLAGS)
+		kubectl kuttl artifacts/tests --report xml $(KUTTL_FLAGS)
 
 # Run chartmuseum to host dev versions of the helm package.
 # The container will be called 'chartmuseum' and we link to
@@ -264,11 +273,6 @@ push-package-chartmuseum: helm-package-chart
 				do curl --data-binary @$${chart} http://chartmuseum:8080/api/charts;
 			done
 			EOF
-
-# TODO@kjoshi: Replace this with a helm install.
-.PHONY: install
-install:
-	OPERATOR_DOCKER_REPO=$(OPERATOR_DOCKER_REPO) OPERATOR_VERSION=$(OPERATOR_VERSION) $(SCRIPTS_DIR)/install_operator.sh
 
 .PHONY: release-spark
 release-spark: docker-spark

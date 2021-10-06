@@ -9,6 +9,7 @@ sparkctl/sparkctl-linux-amd64
 sparkctl/sparkctl-darwin-amd64
 
 # D2iQ related
+admin.conf
 tmp.checksum
 docker-operator
 docker-spark
