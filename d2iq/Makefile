@@ -54,6 +54,8 @@ export AWS_ACCESS_KEY_ID ?= $(call get_aws_credential,aws_access_key_id)
 export AWS_SECRET_ACCESS_KEY ?= $(call get_aws_credential,aws_secret_access_key)
 export AWS_SESSION_TOKEN ?=$(call get_aws_credential,aws_session_token)
 
+KUTTL_FLAGS ?=
+
 #AWS_BUCKET_NAME ?= "kudo-ds-ci-artifacts"
 #AWS_BUCKET_PATH ?= "kudo-spark-operator/tests"
 
@@ -224,7 +226,7 @@ kuttl-test:
 		-e AWS_BUCKET_NAME=$(AWS_BUCKET_NAME) \
 		-e AWS_BUCKET_PATH=$(AWS_BUCKET_PATH) \
 		$(shell cat $(ROOT_DIR)/docker-builder) \
-		kubectl kuttl artifacts/tests --report xml $(KUTTL_FLAGS)
+		kubectl kuttl test --namespace $(NAMESPACE) --report xml artifacts/tests $(KUTTL_FLAGS)
 
 # Run chartmuseum to host dev versions of the helm package.
 # The container will be called 'chartmuseum' and we link to
