@@ -171,8 +171,12 @@ update-spark-templates:
 		exit 1
 		fi
 
+
+		# Remove stale tests
+		rm -rf artifacts/tests
 		# Create test folders.
 		mkdir -p artifacts/tests
+		# Copy templates
 		cp -r d2iq/kuttl-test-templates/*  artifacts/tests
 
 		# Get Spark, Scala & Hadoop versions.
@@ -226,7 +230,7 @@ kuttl-test:
 		-e AWS_BUCKET_NAME=$(AWS_BUCKET_NAME) \
 		-e AWS_BUCKET_PATH=$(AWS_BUCKET_PATH) \
 		$(shell cat $(ROOT_DIR)/docker-builder) \
-		kubectl kuttl test --namespace $(NAMESPACE) --report xml artifacts/tests $(KUTTL_FLAGS)
+		kubectl kuttl test --parallel 1 --namespace $(NAMESPACE) --report xml artifacts/tests $(KUTTL_FLAGS)
 
 # Run chartmuseum to host dev versions of the helm package.
 # The container will be called 'chartmuseum' and we link to
