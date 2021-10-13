@@ -137,7 +137,6 @@ docker-push:
 
 .PHONY: update-spark-templates
 update-spark-templates:
-	mkdir -p artifacts/tests
 	# Get Spark, Scala & Hadoop version details.
 	docker run -i --rm \
 		-v $(ROOT_DIR):/kudo-spark-operator \
