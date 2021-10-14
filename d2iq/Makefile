@@ -181,7 +181,7 @@ update-spark-templates:
 		# Get Spark, Scala & Hadoop versions.
 		source docker-spark-env
 		# Get all the files to process.
-		test_files=( artifacts/tests/**/**.yaml* ) 
+		test_files=$$(find artifacts/tests/ -name *.yaml*)
 		for yaml in $${test_files[@]}; do
 			# Replace tokens.
 			sed -i "s|CHARTMUSEUM_PORT|$${CHARTMUSEUM_PORT}|g" $$yaml
