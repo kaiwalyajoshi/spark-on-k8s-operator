@@ -6,7 +6,7 @@ spec:
   type: Scala
   mode: cluster
   image: SPARK_IMAGE_FULL_NAME
-  imagePullPolicy: Always
+  imagePullPolicy: IfNotPresent
   mainClass: org.apache.spark.examples.SparkPi
   mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_SCALA_VERSION-SPARK_VERSION.jar"
   arguments:
