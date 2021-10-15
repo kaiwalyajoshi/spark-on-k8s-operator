@@ -5,8 +5,8 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: mesosphere/spark:spark-3.0.0-hadoop-2.9-k8s
-  imagePullPolicy: Always
+  image: SPARK_IMAGE_FULL_NAME
+  imagePullPolicy: IfNotPresent
   mainClass: MockTaskRunner
   mainApplicationFile: "https://kudo-spark.s3-us-west-2.amazonaws.com/spark-scala-tests-3.0.0-20200819.jar"
   sparkConf:
@@ -22,7 +22,7 @@ spec:
     "spark.kubernetes.driver.secretKeyRef.SPARK_SSL_KEYPASSWORD": "secrets:key-password"
     "spark.kubernetes.driver.secretKeyRef.SPARK_SSL_KEYSTOREPASSWORD": "secrets:keystore-password"
     "spark.kubernetes.driver.secretKeyRef.SPARK_SSL_TRUSTSTOREPASSWORD": "secrets:truststore-password"
-  sparkVersion: 3.0.0
+  sparkVersion: SPARK_VERSION
   arguments:
   - "1"
   - "10"
@@ -32,11 +32,11 @@ spec:
     cores: 1
     memory: "512m"
     labels:
-      version: 3.0.0
-    serviceAccount: spark-spark-service-account
+      version: SPARK_VERSION
+    serviceAccount: spark-operator-spark
   executor:
     cores: 1
     instances: 1
     memory: "512m"
     labels:
-      version: 3.0.0
+      version: SPARK_VERSION
