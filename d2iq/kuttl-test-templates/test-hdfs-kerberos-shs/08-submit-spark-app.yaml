@@ -5,10 +5,10 @@ metadata:
 spec:
   type: Scala
   mode: cluster
-  image: mesosphere/spark:spark-3.0.0-hadoop-2.9-k8s
-  imagePullPolicy: Always
+  image: SPARK_IMAGE_FULL_NAME
+  imagePullPolicy: IfNotPresent
   mainClass: org.apache.spark.examples.HdfsTest
-  mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_2.12-3.0.0.jar"
+  mainApplicationFile: "local:///opt/spark/examples/jars/spark-examples_SCALA_VERSION-SPARK_VERSION.jar"
   arguments:
   - "hdfs://namenode.hdfs-kerberos.svc.cluster.local:9000/spark/README.txt"
   sparkConf:
@@ -19,15 +19,15 @@ spec:
     "spark.eventLog.enabled": "true"
     "spark.eventLog.dir": hdfs://namenode.hdfs-kerberos.svc.cluster.local:9000/history
   hadoopConfigMap: hadoop-conf
-  sparkVersion: 3.0.0
+  sparkVersion: SPARK_VERSION
   restartPolicy:
     type: Never
   driver:
     cores: 1
     memory: "512m"
     labels:
-      version: 3.0.0
-    serviceAccount: spark-spark-service-account
+      version: SPARK_VERSION
+    serviceAccount: spark-operator-spark
     secrets:
     - name: hadoop-token
       path: /mnt/secrets
@@ -38,7 +38,7 @@ spec:
     memory: "512m"
     deleteOnTermination: false
     labels:
-      version: 3.0.0
+      version: SPARK_VERSION
     secrets:
     - name: hadoop-token
       path: /mnt/secrets
