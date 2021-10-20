@@ -1,9 +1,0 @@
-apiVersion: kudo.dev/v1beta1
-kind: Instance
-metadata:
-  name: spark-with-custom-rbac
-  namespace: spark-rbac-test
-status:
-  planStatus:
-    deploy:
-      status: COMPLETE
