@@ -2,13 +2,13 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: spark-custom-rbac-spark-service-account
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
   name: spark-driver-test-role
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -21,7 +21,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
   name: spark-driver-role-test-binding
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 subjects:
 - kind: ServiceAccount
   name: spark-custom-rbac-spark-service-account
@@ -34,7 +34,7 @@ apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: spark-operator-custom-rbac-service-account
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -47,7 +47,7 @@ rules:
 - apiGroups: [""]
   resources: ["services", "configmaps", "secrets"]
   verbs: ["create", "get", "delete", "update"]
-- apiGroups: ["extensions"]
+- apiGroups: ["extensions", "networking.k8s.io"]
   resources: ["ingresses"]
   verbs: ["create", "get", "delete"]
 - apiGroups: [""]
@@ -56,11 +56,14 @@ rules:
 - apiGroups: [""]
   resources: ["events"]
   verbs: ["create", "update", "patch"]
+- apiGroups: [""]
+  resources: ["resourcequotas"]
+  verbs: ["get", "list", "watch"]
 - apiGroups: ["apiextensions.k8s.io"]
   resources: ["customresourcedefinitions"]
   verbs: ["create", "get", "update", "delete"]
 - apiGroups: ["admissionregistration.k8s.io"]
-  resources: ["mutatingwebhookconfigurations"]
+  resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"]
   verbs: ["create", "get", "update", "delete"]
 - apiGroups: ["sparkoperator.k8s.io"]
   resources: ["sparkapplications", "scheduledsparkapplications", "sparkapplications/status", "scheduledsparkapplications/status"]
@@ -73,7 +76,7 @@ metadata:
 subjects:
 - kind: ServiceAccount
   name: spark-operator-custom-rbac-service-account
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 roleRef:
   kind: ClusterRole
   name: spark-operator-custom-rbac-cluster-role

@@ -1,7 +1,0 @@
-apiVersion: kuttl.dev/v1beta1
-kind: TestStep
-delete:
-- apiVersion: kudo.dev/v1beta1
-  kind: Instance
-  metadata:
-    name: spark-default-rbac

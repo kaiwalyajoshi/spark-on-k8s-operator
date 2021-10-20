@@ -10,7 +10,7 @@ apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
   name: mock-task-runner
-  namespace: spark-rbac-test
+  namespace: spark-test-rbac
 status:
   applicationState:
     state: COMPLETED
