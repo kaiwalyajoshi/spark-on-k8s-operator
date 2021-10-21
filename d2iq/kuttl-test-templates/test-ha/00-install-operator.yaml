@@ -16,6 +16,7 @@ commands:
 
           # Issue uninstall.
           helm uninstall spark-operator -n spark
+          kubectl get clusterrole spark-operator
           kubectl get clusterrolebinding spark-operator
           kubectl delete ns spark
          

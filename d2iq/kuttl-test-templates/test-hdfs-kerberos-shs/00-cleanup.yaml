@@ -4,6 +4,7 @@ commands:
   - script: |
       helm uninstall spark-operator -n spark
       kubectl delete ns spark
+      kubectl delete clusterrole spark-operator
       kubectl delete clusterrolebinding spark-operator
       kubectl create ns spark
     timeout: 300
