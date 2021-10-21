@@ -15,6 +15,7 @@ commands:
 
           # Issue uninstall.
           helm uninstall spark-test-rbac -n spark-rbac-test
+          kubectl delete clusterrole spark-test-rbac
           kubectl delete clusterrolebinding spark-test-rbac
           kubectl delete ns spark-rbac-test
 

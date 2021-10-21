@@ -17,6 +17,7 @@ commands:
           helm uninstall spark-operator -n spark
           kubectl delete --wait serviceaccount default -n spark
           kubectl delete --wait serviceaccount spark-operator -n spark
+          kubectl delete --wait clusterrole spark-operator
           kubectl delete --wait clusterrolebinding spark-operator
           # Do not uninstall spark namespace, has dependent secrets.
 
