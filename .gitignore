@@ -10,6 +10,8 @@ sparkctl/sparkctl-darwin-amd64
 
 # D2iQ related
 admin.conf
+kubeconfig
+kuttl-test.xml
 tmp.checksum
 docker-operator
 docker-spark

@@ -3,29 +3,18 @@ SHELL := /bin/bash
 .SHELLFLAGS = -ec
 
 ROOT_DIR := $(CURDIR)
-SCRIPTS_DIR := $(ROOT_DIR)/scripts
-KUDO_TOOLS_DIR := $(ROOT_DIR)/shared
 SPARK_OPERATOR_DIR := $(ROOT_DIR)
-
-export KONVOY_VERSION ?= v1.7.0-rc.1
-export CLUSTER_CONFIG_YAML ?= $(ROOT_DIR)/cluster.template.yaml
-export WORKER_NODE_INSTANCE_TYPE ?= m5.2xlarge
-export WORKER_NODE_COUNT ?= 5
 
 export CHARTMUSEUM_PORT ?= 8080
 export CHARTMUSEUM_VERSION ?= v0.13.1
 
 export NAMESPACE ?= spark
-MKE_CLUSTER_NAME=kubernetes-cluster1
 
-CLUSTER_TYPE ?= konvoy
 KUBECONFIG ?= $(ROOT_DIR)/admin.conf
 
 DOCKER_REGISTRY ?= docker.io
 
-# DELETEME@kjoshi remove this!
-#DOCKER_ORG ?= mesosphere
-DOCKER_ORG ?= kaiwalyarjoshi
+DOCKER_ORG ?= mesosphere
 
 export SPARK_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-dev
 SPARK_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/spark
@@ -34,14 +23,14 @@ export SPARK_IMAGE_FULL_NAME ?= $(SPARK_DOCKER_REPO):$(SPARK_IMAGE_TAG)
 
 SPARK_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark
 
-export OPERATOR_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator-dev
+export OPERATOR_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/kudo-spark-operator-dev
 OPERATOR_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/operator
 # Excercise caution in included lists for files_checksum here. Do not include $(ROOT_DIR) as it gets new build artifacts
 # Otherwise the checksum used as the image tag will always change.
 export OPERATOR_VERSION ?= $(call files_checksum,$(SPARK_IMAGE_DIR) $(OPERATOR_IMAGE_DIR) $(ROOT_DIR)/pkg $(ROOT_DIR)/main.go)
 export OPERATOR_IMAGE_FULL_NAME ?= $(OPERATOR_DOCKER_REPO):$(OPERATOR_VERSION)
 
-OPERATOR_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator
+OPERATOR_RELEASE_DOCKER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/kudo-spark-operator
 
 export DOCKER_BUILDER_REPO ?= $(DOCKER_REGISTRY)/$(DOCKER_ORG)/spark-operator-docker-builder
 DOCKER_BUILDER_IMAGE_DIR ?= $(ROOT_DIR)/d2iq/images/builder
@@ -56,35 +45,8 @@ export AWS_SESSION_TOKEN ?=$(call get_aws_credential,aws_session_token)
 
 KUTTL_FLAGS ?=
 
-#AWS_BUCKET_NAME ?= "kudo-ds-ci-artifacts"
-#AWS_BUCKET_PATH ?= "kudo-spark-operator/tests"
-
-AWS_BUCKET_NAME ?= "kjoshi-dev"
+AWS_BUCKET_NAME ?= "spark-operator-tests"
 AWS_BUCKET_PATH ?= "spark-operator/tests"
-
-# TODO@kjoshi, replace these with konvoy2
-.PHONY: cluster-create
-cluster-create: aws_credentials
-cluster-create:
-	if [[ ! -f  $(CLUSTER_TYPE)-created ]]; then
-		$(KUDO_TOOLS_DIR)/cluster.sh $(CLUSTER_TYPE) up
-		echo > $(CLUSTER_TYPE)-created
-	fi
-
-# TODO@kjoshi, replace these with konvoy2
-.PHONY: cluster-destroy
-cluster-destroy: aws_credentials
-cluster-destroy:
-	if [[ $(CLUSTER_TYPE) == konvoy ]]; then
-		$(KUDO_TOOLS_DIR)/cluster.sh konvoy down
-		rm -f konvoy-created
-	else
-		$(KUDO_TOOLS_DIR)/cluster.sh mke down
-		rm -f mke-created
-		kubectl config unset users.$(MKE_CLUSTER_NAME)
-		kubectl config delete-context $(MKE_CLUSTER_NAME)
-		kubectl config delete-cluster $(MKE_CLUSTER_NAME)
-	fi
 
 # Docker
 docker-builder:
@@ -196,19 +158,6 @@ update-spark-templates:
 			sed -i "s|SPARK_IMAGE_TAG|$${SPARK_IMAGE_TAG}|g" $$yaml
 		done
 		EOF
-
-# this target updates Spark image for all SparkApplication manifests in tests
-.PHONY: update-spark-image-in-test-manifests
-update-spark-image-in-test-manifests:
-	if ! command -v yq &> /dev/null; then
-	  echo 'Error: yq is not installed.' >&2
-	  exit 1
-	fi
-	for yaml in d2iq/tests/**/**/*.yaml; do
-		if [[ `yq r $$yaml 'kind'` == 'SparkApplication' ]]; then
-			yq w -i $$yaml 'spec.image' $(SPARK_IMAGE_FULL_NAME)
-		fi
-	done
 
 # This requires 'chartmuseum' container to be running.
 .PHONY: kuttl-test
